@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
-import pandas as pd
+import os
+
 from feature_extractor import extract_features
 
 app = Flask(__name__)
@@ -9,9 +10,9 @@ CORS(app)
 
 model = joblib.load("phishing_model.pkl")
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
-    return {"status": "Phishing Detection API is live"}
+    return "Phishing Detection API is running"
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -19,17 +20,16 @@ def predict():
     url = data.get("url")
 
     if not url:
-        return jsonify({"error": "URL missing"}), 400
+        return jsonify({"error": "URL is required"}), 400
 
     features = extract_features(url)
-    df = pd.DataFrame([features])
-    prediction = model.predict(df)[0]
+    prediction = model.predict([features])[0]
 
     return jsonify({
-        "phishing": int(prediction),
-        "result": "PHISHING" if prediction == 1 else "SAFE"
+        "url": url,
+        "phishing": bool(prediction)
     })
 
 if __name__ == "__main__":
-      port = int(os.environ.get("PORT", 10000))
-      app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
